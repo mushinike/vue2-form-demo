@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<style>
+			*{padding: 0;margin: 0;}
+			body{font-size: 13px;width: 980px;margin:0 auto;text-align: left;}
+			.form-input-error{color: #B22222;}
+			.clearfix:after { 
+				content: "." ; 
+				display: block ;
+				height: 0 ;
+				clear: both ;
+				visibility: hidden ;
+			}
+			.form-input{margin-bottom:10px;}
+			.form-input-value{display: inline-block;}
+			.form-input-error{height:16px;line-height: 16px;margin-left:40px;}
+			
+		</style>
+	</head>
+	<body>
+		<div id="app">
+			<forms ref="myname" :rules="rules" :model="form">
+				<form-item label="名称" prop="name">
+					<form-input type="text" v-model="form.name"  class="abc"></form-input>
+				</form-item>
+				<form-item label="年龄" prop="age">
+					<form-input  v-model="form.age"></form-input>
+				</form-item>
+				<form-item label="邮箱" prop="content">
+					<form-input type="text" v-model="form.content" ></form-input>
+				</form-item>
+				<form-item>
+					<input type="submit" @click="submit" />
+				</form-item>
+			</forms>
+			<div>{{form}}</div>
+			
+			<script type="text/template" id="forms">
+				<div class='form'><slot></slot></div>
+			</script>
+			<script type="text/template" id="form-item">
+				<div class="form-input clearfix">
+					<div class="form-input-main">
+						<span class="form-input-label" v-text="label?label+'：':''"></span>
+						<p class="form-input-value" :class="{'error-class':errorMsg}">
+							<slot></slot>
+						</p>
+					</div>
+					<p class="form-input-error"  v-text="errorMsg"></p>
+				</div>
+			</script>
+			<script type="text/template" id="form-input">
+				<input @input="input" v-model="value" />
+			</script>
+			
+		</div>
+		<script src="js/vue.min.js"></script>
+		<script>
+			new Vue({
+				el:"#app",
+				data:{
+					form:{
+						name:"",
+						age:"",
+						content:""
+					},
+					rules:{
+						name:[
+							{ required: true, message: '请输入名称', trigger: 'blur' },
+				            { min: 3, max: 5,type:"string", message: '长度在 3 到 5 个字符', trigger: 'blur' }
+			            ],
+			            age:[
+			            	{required: true, message: '请输入年龄', trigger: 'blur'},
+			            	{type: 'number',min:8, message: '年龄最小为8', trigger: 'blur'}
+			            ],
+			            content:[
+			            	{
+			            		validator:function(value,model){
+			            			if(value==""){
+			            				return false;
+			            			}
+			            			
+			            			return true;
+			            		},
+			            		trigger: 'blur',
+			            		message: '内容必须填'
+			            	},
+			            	{
+			            		validator:function(value,model){
+			            			var regex=/^(\w)+@+(\w)+\.+(\w)+/;
+
+			            			return regex.test(value);
+			            		},
+			            		trigger: 'blur',
+			            		message: '内容必须为邮箱格式'
+			            	}
+			            ]
+					}
+				},
+				components:{
+					"forms":{
+						template:"#forms",
+						data:function(){
+							return {
+								valid:true
+							}
+						},
+						props:["model","rules"],
+						mounted:function(){
+							var childs=this.$children;
+							var rules=this.rules,rule;
+							var _this=this;
+							for(var i=0,ii=childs.length;i<ii;i++){
+								(function(i){
+									var child=childs[i];
+									rule=rules[child.prop];
+									if(rule){
+										var obj,el=child.$el.querySelector("input"),
+											eventObj={},scope={},msg={},
+											value=_this.model[child.prop];
+											
+										if(!el)
+										{
+											return "";
+										}
+										for(var j=0,jj=rule.length;j<jj;j++){
+											var eve;
+											obj=rule[j];
+											var str=obj["trigger"];
+											if(!str){
+												continue;
+											}
+											eventObj[str]=eve=eventObj[str]||[];
+											if(obj.required==true){
+												eve.push(function(mychild){
+													var name=mychild.prop;
+													return _this.model[name]!="";
+												});
+											}
+											else if(obj.type=="number"&&(obj.min||obj.max)){
+												if(obj.min&&obj.max){
+													eve.push(function(mychild){
+														var name=mychild.prop;
+														
+														if(_this.model[name]>=obj.min&&_this.model[name]<=obj.max){
+															return true;
+														}
+														
+														return false;
+													});	
+												}
+												else if(obj.min){
+													eve.push(function(mychild){
+														var name=mychild.prop;
+														if(_this.model[name]>=obj.min){
+															return true;
+														}
+														
+														return false;
+													});	
+												}
+												else if(obj.max){
+													eve.push(function(mychild){
+														var name=mychild.prop;
+														if(_this.model[name]<=obj.max){
+															return true;
+														}
+														
+														return false;
+													});	
+												}
+												
+											}
+											else if(obj.type=="number"){
+												eve.push(function(mychild){
+													var name=mychild.prop;
+													return isNaN(_this.model[name])!==true;
+												});
+											}
+											else if(obj.type=="string"){
+												if(obj.min&&obj.max){
+													eve.push(function(mychild){
+														var name=mychild.prop;
+														if(_this.model[name].length>=obj.min&&_this.model[name].length<=obj.max){
+															return true;
+														}
+														
+														return false;
+													});	
+												}
+												else if(obj.min){
+													eve.push(function(mychild){
+														var name=mychild.prop;
+														if(_this.model[name].length>=obj.min){
+															return true;
+														}
+														
+														return false;
+													});	
+												}
+												else if(obj.max){
+													eve.push(function(mychild){
+														var name=mychild.prop;
+														if(_this.model[name].length<=obj.max){
+															return true;
+														}
+														
+														return false;
+													});	
+												}
+											}else if(obj.validator){
+												(function(kobj){
+													eve.push(function(mychild){
+														var name=mychild.prop;
+														return kobj.validator.call(null,_this.model[name],_this.model);
+													});
+												})(obj);
+											}
+											
+											msg[str]=msg[str]||[];
+											
+											msg[str].push(obj.message);
+											
+											scope[str]=scope[str]||[];
+											scope[str].push(child);
+											
+										}
+										
+										for(var key in eventObj){
+											var currentObj=eventObj[key];
+											el.addEventListener(key,function(e){
+												for(var k=0,kk=currentObj.length;k<kk;k++){
+													var myscope=scope[key][k];
+													if(currentObj[k].call(null,myscope)==false){
+														myscope.valid=false;
+														myscope.errorMsg=msg[key][k];
+														break;
+													}else{
+														myscope.valid=true;
+														myscope.errorMsg="";
+													}
+												}
+											},false);
+										}
+									}
+								})(i);
+								
+							}
+						},
+						methods:{
+							validate:function(callback){
+								var childs=this.$children;
+								var rules=this.rules,rule;
+								var _this=this;
+								this.valid=true;
+								for(var i=0,ii=childs.length;i<ii;i++){
+									var child=childs[i];
+									rule=rules[child.prop];
+									if(rule){
+										var obj,el=child.$el.querySelector("input"),
+											value=_this.model[child.prop],name=child.prop;
+											
+											
+										if(!el)
+										{
+											continue;
+										}
+										for(var j=0,jj=rule.length;j<jj;j++){
+											if(!child.valid){
+												this.valid=false;
+												continue;
+											}
+											
+											obj=rule[j];
+
+											var flag
+											
+											if(obj.required==true){
+												
+												flag= value!="";
+												child.valid=flag;
+												if(!flag){
+													this.valid=false;
+													child.errorMsg=obj.message;
+													continue;
+												}
+											}
+											else if(obj.type=="number"&&(obj.min||obj.max)){
+												if(obj.min&&obj.max){
+													flag= value>=obj.min&&value<=obj.max;
+													child.valid=flag;
+													if(!flag){
+														this.valid=false;
+														child.errorMsg=obj.message;
+														continue;
+													}
+												}
+												else if(obj.min){
+													flag=value>=obj.min;
+													child.valid=flag;
+													if(!flag){
+														this.valid=false;
+														child.errorMsg=obj.message;
+														continue;
+													}
+												}
+												else if(obj.max){
+													flag=value<=obj.min;
+													child.valid=flag;
+													if(!flag){
+														this.valid=false;
+														child.errorMsg=obj.message;
+														continue;
+													}
+												}
+												
+											}
+											else if(obj.type=="number"){
+												flag=isNaN(value)!==true;
+												child.valid=flag;
+												if(!flag){
+													this.valid=false;
+													child.errorMsg=obj.message;
+													continue;
+												}
+											}
+											else if(obj.type=="string"){
+												if(obj.min&&obj.max){
+													flag=value.length>=obj.min&&value.length<=obj.max;
+													child.valid=flag;
+													if(!flag){
+														this.valid=false;
+														child.errorMsg=obj.message;
+														continue;
+													}
+												}
+												else if(obj.min){
+													flag=value.length>=obj.min;
+													child.valid=flag;
+													if(!flag){
+														this.valid=false;
+														child.errorMsg=obj.message;
+														continue;
+													}
+												}
+												else if(obj.max){
+													flag=value.length<=obj.max;
+													child.valid=flag;
+													if(!flag){
+														this.valid=false;
+														child.errorMsg=obj.message;
+														continue;
+													}
+												}
+											}else if(obj.validator){
+
+												flag=obj.validator.call(null,value,_this.model);
+												child.valid=flag;
+												if(!flag){
+													this.valid=false;
+													child.errorMsg=obj.message;
+													continue;
+												}
+											}
+											
+											
+										}
+									}
+								}
+								
+								callback(this.valid);
+							}
+						}
+					},
+					"form-item":{
+						template:"#form-item",
+						data:function(){
+							return{
+								name:"",
+								errorMsg:"",
+								valid:true
+							}
+						},
+						props:["label","prop"],
+						created:function()
+						{
+							/*this.$on("getName",function(name){
+								this.name=name;
+							})*/
+						}
+					},
+					"form-input":{
+						template:"#form-input",
+						data:function(){
+							return {
+								name:"input",
+								value:"",
+							}
+						},
+						//props:["type"],
+						mounted:function(){
+							//this.$emit("getName","input");
+						},
+						methods:{
+							input:function(){
+								this.$emit("input",this.value);
+							}
+						}
+					}
+				},
+				mounted:function(){
+					
+					
+				},
+				methods:{
+					input:function(val){
+						console.log(val)
+					},
+					submit:function(){
+						this.$refs["myname"].validate(function(valid){
+							console.log(valid);
+						})
+					}
+				}
+			})
+		</script>
+	</body>
+</html>
